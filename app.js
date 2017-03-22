@@ -6,6 +6,7 @@ var fs = require('fs');
 var parse = require('csv-parse');
 var http = require('http');
 var async = require('async');
+var XLSX = require('xlsx');
 
 var app = express();
 var port = process.env.PORT || 3000;
@@ -170,7 +171,23 @@ app.post('/upload', function (req, res) {
     var form = new formidable.IncomingForm();
     form.parse(req, function (err, fields, files) {
         if (typeof files.file != 'undefined') {
-            if (files.file.type == 'text/csv') {
+            var csvData = [];
+            var excelData =  XLSX.readFile(files.file.path);            
+            var filename = files.file.name.split('.').slice(0, -1).join('.');
+            async.forEachOfSeries(excelData.Sheets[filename], function (value, key, cb) {
+                if(key[0] == 'A'){
+                    csvData.push({ url: value.v, emails: '', phones: '', social: '' });
+                }
+                cb();
+            }, function (err) {
+                res.json({
+                    status: 200,
+                    data: csvData,
+                    message: 'success'
+                });
+            });
+
+            /*if (files.file.type == 'text/csv') {
                 var csvData = [];
                 fs.createReadStream(files.file.path)
                     .pipe(parse({ delimiter: ':' }))
@@ -189,7 +206,7 @@ app.post('/upload', function (req, res) {
                     status: 201,
                     message: 'Please select a CSV file!'
                 });
-            }
+            }*/
         } else {
             res.json({
                 status: 201,
